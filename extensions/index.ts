@@ -20,7 +20,7 @@ import { networkTriage } from "../src/skills/networkTriage.ts";
 import { remoteSession } from "../src/skills/remoteSession.ts";
 import { reverseApp } from "../src/skills/reverseApp.ts";
 import { sshTunnel } from "../src/skills/sshTunnel.ts";
-import { ioFromContext } from "../src/skills/types.ts";
+import { ioFromContext, setReportSink } from "../src/skills/types.ts";
 
 type SkillHandler = (args: string, ctx: ExtensionCommandContext) => Promise<void>;
 
@@ -92,6 +92,15 @@ export default function activate(pi: ExtensionAPI): void {
     description: "Auto-dispatch freeform input to the pi-rescue /assist concierge (also: PI_RESCUE_ASSIST=1)",
     type: "boolean",
     default: false,
+  });
+
+  // Reports need their own durable chat entry: `ctx.ui.notify()` collapses consecutive status
+  // lines (pi's `showStatus`), which would otherwise let a post-report "Skipped: …"/"Done: …"
+  // fix-confirmation line silently erase the diagnostic report just printed before it. A custom
+  // message always appends. It also means the report re-enters context as a user-role message on
+  // the next turn (see @earendil-works/pi-coding-agent's messages.ts), so pi can act on it further.
+  setReportSink((text) => {
+    pi.sendMessage({ customType: "pi-rescue-report", content: text, display: true }, { triggerTurn: false });
   });
 
   for (const [name, skill] of Object.entries(SKILLS)) {

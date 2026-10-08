@@ -205,7 +205,7 @@ export async function runDiagnose(deps: DiagnoseDeps): Promise<DiagnoseResult> {
     report = fallbackReport(results);
   }
 
-  deps.io.print(report);
+  deps.io.report(report);
 
   const fixesApplied: string[] = [];
   for (const fix of suggestFixes(results)) {

@@ -84,3 +84,17 @@ test("runDiagnose: a RAG engine that throws on retrieve() doesn't crash the whol
   });
   assert.ok(result.report.length > 0);
 });
+
+test("runDiagnose: the report goes through io.report(), not io.print() — print()'s notify collapses consecutive lines", async () => {
+  const io = collectingIO();
+  const dfNearlyFull = async () => ({ stdout: "", stderr: "", code: null, failure: "ENOENT" as const });
+  await runDiagnose({ io, exec: dfNearlyFull, model: undefined });
+  assert.equal(
+    io.reportLog.length,
+    1,
+    "exactly one report, even though print() was called many times before/after it",
+  );
+  assert.match(io.reportLog[0] ?? "", /couldn't reach a diagnosis model/);
+  // The confirm/"Skipped: …" messages around a suggested fix are narration, not the report itself.
+  assert.ok(!io.log.some((line) => line.includes("couldn't reach a diagnosis model")));
+});
