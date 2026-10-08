@@ -142,7 +142,7 @@ Candidate skills + image tools for a do-everything rescue/diagnostic/dev/sec ima
 - **power / ipmi** — remote power + serial console via IPMI/Redfish/iLO/racadm (DIRECTLY addresses the lab's BMC recovery pain).
 - **firmware** — inventory + update firmware (fwupd); BIOS/BMC access.
 - **storage** — RAID/LVM/ZFS/BeeGFS health + recovery, SMART trends, capacity planning.
-- **cluster** — Slurm/HPC: node health, job failures, munge/slurmd/BeeGFS (fiehnlab + hive).
+- **cluster** — Slurm/HPC: node health, job failures, munge/slurmd/BeeGFS (multiple clusters).
 - **gpu** — driver/CUDA/ROCm health, thermal/ECC/MIG, container-GPU, GPU benchmark.
 - **db** — Postgres/MySQL/Mongo: connectivity, slow queries, bloat, replication lag (lab is Postgres-heavy).
 - **container** — docker/apptainer/k8s: won't-start triage, image inspection (dive), registry, GPU-in-container.

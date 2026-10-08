@@ -16,7 +16,7 @@ routing:
       fallback: "local/qwen3-local"
   providers:
     metabolomics:
-      base_url: "https://llm.metabolomics.us/v1"   # apiKey injected at runtime from the LUKS container
+      base_url: "https://llm.example.com/v1"   # set to your OpenAI-compatible gateway; key injected at runtime from the LUKS container
     local:
       base_url: "http://127.0.0.1:8080/v1"         # llama-server (chat), alias qwen3-local
 

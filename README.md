@@ -22,7 +22,7 @@ launcher). The slash-commands below are just the expert shortcuts under the hood
 Built to ride on the **`rescue-os`** rescue USB (Ubuntu live + full toolset),
 where the local model is small, so every skill is **RAG-augmented**: it retrieves
 from a curated diagnostic knowledge base before answering, and works against either
-the local Ollama model (offline) or the `llm.metabolomics.us` gateway (online).
+the local Ollama model (offline) or the `llm.example.com` gateway (online).
 
 ## Why
 

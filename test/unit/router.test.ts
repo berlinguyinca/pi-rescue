@@ -13,7 +13,7 @@ const CONFIG: RescueRoutingConfig = {
     triage: { model: "metabolomics/qwen-flash" },
   },
   providers: {
-    metabolomics: { base_url: "https://llm.metabolomics.us/v1" },
+    metabolomics: { base_url: "https://llm.example.com/v1" },
     local: { base_url: "http://127.0.0.1:11434" },
   },
 };
@@ -36,8 +36,8 @@ test("parseModelRef: throws without a provider prefix", () => {
 
 test("chatCompletionsUrl: appends /v1/chat/completions, normalizing an existing /v1", () => {
   assert.equal(
-    chatCompletionsUrl("https://llm.metabolomics.us/v1"),
-    "https://llm.metabolomics.us/v1/chat/completions",
+    chatCompletionsUrl("https://llm.example.com/v1"),
+    "https://llm.example.com/v1/chat/completions",
   );
   assert.equal(chatCompletionsUrl("http://127.0.0.1:11434"), "http://127.0.0.1:11434/v1/chat/completions");
   assert.equal(chatCompletionsUrl("http://127.0.0.1:11434/"), "http://127.0.0.1:11434/v1/chat/completions");
@@ -56,7 +56,7 @@ test("ModelRouter: fails over to local Ollama when the gateway errors", async ()
   let calls = 0;
   const fetchImpl: FetchLike = async (url) => {
     calls++;
-    if (url.includes("metabolomics")) throw new Error("ECONNREFUSED");
+    if (url.includes("example.com")) throw new Error("ECONNREFUSED");
     return jsonResponse(chatBody("local answer"));
   };
   const router = new ModelRouter({ config: CONFIG, fetchImpl, env: { METABOLOMICS_API_KEY: "secret" } });
@@ -69,7 +69,7 @@ test("ModelRouter: fails over to local Ollama when the gateway errors", async ()
 
 test("ModelRouter: fails over on a 5xx from the gateway", async () => {
   const fetchImpl: FetchLike = async (url) =>
-    url.includes("metabolomics") ? jsonResponse({}, false, 503) : jsonResponse(chatBody("local answer"));
+    url.includes("example.com") ? jsonResponse({}, false, 503) : jsonResponse(chatBody("local answer"));
   const router = new ModelRouter({ config: CONFIG, fetchImpl, env: { METABOLOMICS_API_KEY: "secret" } });
   const result = await router.complete([{ role: "user", content: "hi" }], "diagnostician");
   assert.equal(result.provider, "local");
@@ -77,7 +77,7 @@ test("ModelRouter: fails over on a 5xx from the gateway", async () => {
 
 test("ModelRouter: fails over on an empty/truncated completion", async () => {
   const fetchImpl: FetchLike = async (url) =>
-    url.includes("metabolomics")
+    url.includes("example.com")
       ? jsonResponse(chatBody("", "length"))
       : jsonResponse(chatBody("local answer"));
   const router = new ModelRouter({ config: CONFIG, fetchImpl, env: { METABOLOMICS_API_KEY: "secret" } });
@@ -88,7 +88,7 @@ test("ModelRouter: fails over on an empty/truncated completion", async () => {
 test("ModelRouter: skips the gateway entirely when no API key is configured", async () => {
   let gatewayCalled = false;
   const fetchImpl: FetchLike = async (url) => {
-    if (url.includes("metabolomics")) gatewayCalled = true;
+    if (url.includes("example.com")) gatewayCalled = true;
     return jsonResponse(chatBody("local answer"));
   };
   const router = new ModelRouter({ config: CONFIG, fetchImpl, env: {} });
@@ -114,7 +114,7 @@ test("ModelRouter: circuit breaker skips a provider that just failed, until the 
   let now = 0;
   let gatewayAttempts = 0;
   const fetchImpl: FetchLike = async (url) => {
-    if (url.includes("metabolomics")) {
+    if (url.includes("example.com")) {
       gatewayAttempts++;
       throw new Error("down");
     }
@@ -145,7 +145,7 @@ test("ModelRouter: circuit breaker skips a provider that just failed, until the 
 test("ModelRouter: mode 'local' never calls the gateway even if configured", async () => {
   let gatewayCalled = false;
   const fetchImpl: FetchLike = async (url) => {
-    if (url.includes("metabolomics")) gatewayCalled = true;
+    if (url.includes("example.com")) gatewayCalled = true;
     return jsonResponse(chatBody("local answer"));
   };
   const router = new ModelRouter({
