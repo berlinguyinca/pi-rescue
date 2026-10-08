@@ -93,3 +93,37 @@ All of the above is authorized-use (own/authorized targets), target-scoped, conf
   mitmproxy addons — search across flows, extract endpoints/tokens/secrets, diff, auto-replay, and
   RAG-flag security issues. This is the value-add over a manual GUI for a small-model-plus-RAG setup.
 Image tools (v2 pass): mitmproxy (mitmweb/mitmdump), wireshark/tshark, + optional HTTP Toolkit & Burp Community.
+
+## Zero-knowledge UX (the point)
+Someone with **no technical knowledge** must be able to use this by **describing the problem or
+asking a question** — nothing else. `assist` is the default front door; plain freeform input is
+auto-dispatched to it, so slash-commands are optional/expert-only.
+
+**Persona:** calm, plain-language, non-judgmental. No jargon unless asked. One simple question at a
+time. Always say what it's about to do and why, in a sentence a non-expert understands. Never dump logs.
+
+**Intent → skill routing (examples):**
+| The user says… | Routes to |
+|---|---|
+| "internet/wifi is slow", "pages take forever", "network feels laggy" | network-audit (perf) |
+| "I can't reach X", "no internet on this machine", "dns not working" | network-triage |
+| "map my network", "what's on my network", "is my network safe?" | network-audit (map+security) + harden |
+| "this PC won't boot / start" | boot-repair → diagnose |
+| "the computer is slow / crashing / hot" | diagnose |
+| "is this box secure?", "lock this down" | harden |
+| "recover files", "I deleted …", "the disk is failing" | disk-rescue |
+| "see what this app/website sends", "capture its traffic", "decrypt its https" | intercept (+reverse for pinning) |
+| "reverse engineer this app", "what API does it call" | reverse (+intercept) |
+| "connect me to / run this on my servers", "tunnel to …" | remote / ssh-tunnel |
+| "rotate/manage my keys" | keys |
+| "check my mikrotik / router" | mikrotik |
+| "I think I was hacked" | incident-triage |
+
+**Safety for non-experts:** read-only first; every change is confirmed in plain language with the
+risk stated; nothing destructive on a guessed intent; "what did you change?" is always answerable.
+
+**Autostart on fiehnlab-live (image side):** boot drops into a friendly greeting — a terminal TUI
+*and* a desktop launcher ("Rescue Assistant") that start pi with the rescue extension in assist mode:
+> "Hi — tell me what's wrong, or ask a question. e.g. 'the wifi is slow', 'this PC won't start',
+>  'is my network safe?', 'show me what this app is sending'."
+Delivered via a `fiehnlab-assist` command + a .desktop entry (image v2 pass).

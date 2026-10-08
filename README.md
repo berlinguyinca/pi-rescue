@@ -7,6 +7,18 @@ and you can plug into **any box** — your own, a sick server, a stranger's lapt
 and **diagnose it, secure it, recover it, or start working on it**, with the agent
 driving the right tools in the right order.
 
+## You don't need to know anything
+
+Just **describe the problem** or **ask a question** — in plain words. You don't pick a tool,
+you don't learn commands. The **`assist`** concierge figures out what's wrong, runs the right
+checks, explains what it found in plain language, and offers to fix it (confirming before any change):
+
+> "the wifi is really slow" · "this laptop won't start" · "is my network safe?" ·
+> "show me what this app is sending" · "I deleted a file, can I get it back?" · "I think I got hacked"
+
+On the rescue USB it **boots straight into that greeting** (terminal + a desktop "Rescue Assistant"
+launcher). The slash-commands below are just the expert shortcuts under the hood.
+
 Built to ride on the **`fiehnlab-live`** rescue USB (Ubuntu live + full toolset),
 where the local model is small, so every skill is **RAG-augmented**: it retrieves
 from a curated diagnostic knowledge base before answering, and works against either
@@ -26,7 +38,8 @@ relevant KB, proposes a plan, and only acts with confirmation (destructive steps
 
 | Skill | What it does |
 |-------|--------------|
-| **`/diagnose`** | Flagship. Collects `inxi`, dmesg, journal, SMART, sensors, `ip`, lynis → RAG → root-cause + fix plan. |
+| **`/assist`** | **The front door.** Describe the problem in plain words → it classifies, routes to the skills below, explains findings simply, and offers to fix. Default behavior for freeform input. |
+| **`/diagnose`** | Collects `inxi`, dmesg, journal, SMART, sensors, `ip`, lynis → RAG → root-cause + fix plan. |
 | **`/network-triage`** | Single host: the link→carrier→DHCP→DNS→route→MTU→firewall ladder. Finds the dead NIC / missing lease / broken DNS. |
 | **`/network-audit`** | Whole network: map topology (+MikroTik), analyze routing (asymmetry/loops/blackholes), measure performance (latency/loss/throughput/top-talkers), and survey security (nmap/NSE, TLS posture, exposed services, rogue devices). Authorized networks only. |
 | **`/harden`** | Runs `lynis` + the fiehnlab hardening playbook, interprets findings, applies fixes, re-scans. |

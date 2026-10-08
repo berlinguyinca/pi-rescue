@@ -27,6 +27,7 @@ rag:
 
 # Skills exposed as /commands by extensions/index.ts
 skills:
+  - assist            # zero-knowledge front door: describe the problem in plain words
   - diagnose
   - network-triage   # single host
   - network-audit    # whole-network: topology/routing/perf/security

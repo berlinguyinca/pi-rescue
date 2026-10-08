@@ -4,6 +4,7 @@
 // surface with that reference when wiring up for real.
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
+import { assist } from "../src/skills/assist.ts";
 import { diagnose } from "../src/skills/diagnose.ts";
 import { networkTriage } from "../src/skills/networkTriage.ts";
 import { networkAudit } from "../src/skills/networkAudit.ts";
@@ -17,6 +18,7 @@ import { reverseApp } from "../src/skills/reverseApp.ts";
 type Skill = (ctx: ExtensionCommandContext, args: string[]) => Promise<void>;
 
 const SKILLS: Record<string, { summary: string; run: Skill }> = {
+  assist: { summary: "Zero-knowledge front door: describe the problem in plain words; routes + explains", run: assist },
   diagnose: { summary: "Collect system context, RAG, and root-cause a box", run: diagnose },
   "network-triage": { summary: "link→DHCP→DNS→route→firewall network debugging ladder (single host)", run: networkTriage },
   "network-audit": { summary: "Whole-network audit: topology, routing, performance & security", run: networkAudit },
