@@ -6,6 +6,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 
 import { diagnose } from "../src/skills/diagnose.ts";
 import { networkTriage } from "../src/skills/networkTriage.ts";
+import { networkAudit } from "../src/skills/networkAudit.ts";
 import { harden } from "../src/skills/harden.ts";
 import { sshTunnel } from "../src/skills/sshTunnel.ts";
 import { remoteSession } from "../src/skills/remoteSession.ts";
@@ -17,7 +18,8 @@ type Skill = (ctx: ExtensionCommandContext, args: string[]) => Promise<void>;
 
 const SKILLS: Record<string, { summary: string; run: Skill }> = {
   diagnose: { summary: "Collect system context, RAG, and root-cause a box", run: diagnose },
-  "network-triage": { summary: "link→DHCP→DNS→route→firewall network debugging ladder", run: networkTriage },
+  "network-triage": { summary: "link→DHCP→DNS→route→firewall network debugging ladder (single host)", run: networkTriage },
+  "network-audit": { summary: "Whole-network audit: topology, routing, performance & security", run: networkAudit },
   harden: { summary: "Audit (lynis) + apply the fiehnlab hardening, then re-scan", run: harden },
   "ssh-tunnel": { summary: "Create/tear down SSH tunnels & port-forwards; inventory", run: sshTunnel },
   remote: { summary: "Remote sessions + fleet command across authorized hosts", run: remoteSession },

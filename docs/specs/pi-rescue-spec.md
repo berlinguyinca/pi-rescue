@@ -47,3 +47,20 @@ effective **diagnose / harden / recover / operate** assistant for any box, ridin
   instrumentation + pinning bypass on a controlled device), correlated with intercept flows.
 - Both are **authorized-use** (own/authorized targets), confirmation-gated, and never auto-scan
   or auto-attack a network. No credential exfiltration tooling; no stealth/evasion features.
+
+## Whole-network audit (network-audit)
+Complements single-host `network-triage`. Four passes, each read-only until a gated action:
+- **MAP** — nmap -sn / arp-scan / fping / netdiscover / LLDP (lldpd); pull routing tables, ARP,
+  DHCP leases and interface stats from MikroTik (RouterOS API/SSH); build a topology graph.
+- **ROUTING** — mtr / traceroute / tcptraceroute to key targets; detect asymmetry, loops,
+  blackholes, wrong gateways, path-MTU, VLAN/segmentation issues.
+- **PERFORMANCE** — latency/loss/jitter matrix; iperf3 throughput mesh; bufferbloat; top talkers
+  (iftop/nethogs/ntopng); DNS latency; duplex/retransmit checks.
+- **SECURITY** — nmap service/version + NSE vuln, masscan for breadth; TLS posture
+  (testssl.sh/sslscan); exposed SNMP; rogue-device / ARP-spoof detection (bettercap);
+  segmentation + firewall-gap checks; weak/default creds (authorized).
+Then RAG-interpret → prioritized findings + remediation.
+
+Image tools (add in v2 pass): nmap+NSE, masscan, arp-scan, fping, netdiscover, lldpd, mtr,
+tcptraceroute, iperf3, iftop, nethogs, ntopng (optional), testssl.sh, sslscan, snmp, bettercap, tshark.
+Scope: authorized networks only; scans are target-scoped + confirmation-gated; no exploitation/evasion.

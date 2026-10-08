@@ -28,7 +28,8 @@ rag:
 # Skills exposed as /commands by extensions/index.ts
 skills:
   - diagnose
-  - network-triage
+  - network-triage   # single host
+  - network-audit    # whole-network: topology/routing/perf/security
   - harden
   - disk-rescue
   - boot-repair

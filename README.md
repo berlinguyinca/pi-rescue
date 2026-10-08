@@ -27,7 +27,8 @@ relevant KB, proposes a plan, and only acts with confirmation (destructive steps
 | Skill | What it does |
 |-------|--------------|
 | **`/diagnose`** | Flagship. Collects `inxi`, dmesg, journal, SMART, sensors, `ip`, lynis → RAG → root-cause + fix plan. |
-| **`/network-triage`** | The link→carrier→DHCP→DNS→route→MTU→firewall ladder. Finds the dead NIC / missing lease / broken DNS. |
+| **`/network-triage`** | Single host: the link→carrier→DHCP→DNS→route→MTU→firewall ladder. Finds the dead NIC / missing lease / broken DNS. |
+| **`/network-audit`** | Whole network: map topology (+MikroTik), analyze routing (asymmetry/loops/blackholes), measure performance (latency/loss/throughput/top-talkers), and survey security (nmap/NSE, TLS posture, exposed services, rogue devices). Authorized networks only. |
 | **`/harden`** | Runs `lynis` + the fiehnlab hardening playbook, interprets findings, applies fixes, re-scans. |
 | **`/disk-rescue`** | SMART triage → read-only `ddrescue` image → fs repair / `photorec` recovery. Safety-first. |
 | **`/boot-repair`** | Diagnose + fix GRUB/EFI/initramfs on a target disk. |
