@@ -127,3 +127,47 @@ risk stated; nothing destructive on a guessed intent; "what did you change?" is 
 > "Hi — tell me what's wrong, or ask a question. e.g. 'the wifi is slow', 'this PC won't start',
 >  'is my network safe?', 'show me what this app is sending'."
 Delivered via a `fiehnlab-assist` command + a .desktop entry (image v2 pass).
+
+## v3+ backlog — the "eierlegende Wollmilchsau" roadmap
+Candidate skills + image tools for a do-everything rescue/diagnostic/dev/sec image. Curated; not all at once.
+
+### Candidate pi skills (beyond the current 14)
+- **backup / migrate** — image a box, back up data (restic/borg/rclone→S3), clone a disk to new hardware (P2V/V2P). "Move this box."
+- **provision** — blank box → configured system (autoinstall/ansible/cluster-join). Bridges the fiehnlab autoinstall work.
+- **update** — snapshot → upgrade → verify → auto-rollback on failure. "Update this safely."
+- **benchmark** — CPU/mem/disk/GPU/net suite vs baselines; flag degraded hardware.
+- **monitor** — stand up instant observability (netdata / node_exporter+Prom/Grafana) on a box or fleet; aggregate logs.
+- **log-analysis** — ingest journald/syslog/app logs → AI anomaly/error/timeline. "What happened last night?"
+- **perf-profile** — profile a slow app (perf/flamegraph/bpftrace/py-spy/strace). "Why is this slow?"
+- **power / ipmi** — remote power + serial console via IPMI/Redfish/iLO/racadm (DIRECTLY addresses the lab's BMC recovery pain).
+- **firmware** — inventory + update firmware (fwupd); BIOS/BMC access.
+- **storage** — RAID/LVM/ZFS/BeeGFS health + recovery, SMART trends, capacity planning.
+- **cluster** — Slurm/HPC: node health, job failures, munge/slurmd/BeeGFS (fiehnlab + hive).
+- **gpu** — driver/CUDA/ROCm health, thermal/ECC/MIG, container-GPU, GPU benchmark.
+- **db** — Postgres/MySQL/Mongo: connectivity, slow queries, bloat, replication lag (lab is Postgres-heavy).
+- **container** — docker/apptainer/k8s: won't-start triage, image inspection (dive), registry, GPU-in-container.
+- **cert / tls** — inspect/renew certs, Let's Encrypt, find expiring certs across a fleet, CA mgmt.
+- **dns** — zone/DNSSEC/propagation checks, local resolver setup.
+- **vpn / mesh** — WireGuard/Tailscale mesh set-up + diagnosis.
+- **wifi** — survey/channel analysis, hostapd AP, captive-portal test rig.
+- **secrets-audit** — gitleaks/trufflehog across a box/repo; key hygiene (lab incident relevance).
+- **compliance / baseline** — CIS/STIG via openscap; golden-image drift detection.
+- **web-audit** — authorized web app scan (nuclei/nikto/zap/wpscan/whatweb).
+- **malware** — deeper analysis: yara, clamav, static+sandbox detonation.
+- **inventory** — full hw/sw inventory of box or fleet → JSON/CMDB.
+- **recover-os** — reinstall/repair any OS, bootloader re-create, chroot-repair, password reset (incl. Windows via chntpw).
+- **doc / runbook** — auto-write up what it found/fixed as a runbook.
+- **teach / explain** — explain a finding/concept at the user's level (extends the zero-knowledge angle to learning).
+
+### Candidate image tools (beyond current)
+- **Network**: termshark, ngrep, tcpflow, scapy, hping3/nping, rustscan, projectdiscovery (subfinder/dnsx/httpx/nuclei), nikto, whatweb, wpscan, ffuf/gobuster, sqlmap, aircrack-ng/wifite/kismet (authorized), vnstat, bmon, netdata, smokeping, sshuttle, wireguard-tools, mosh, zellij.
+- **System/HW**: ipmitool/freeipmi/redfishtool (BMC!), fwupd, s-tui, sysbench, phoronix-test-suite, sg3-utils/lsscsi, zfsutils, woeusb/ventoy (make boot USBs), rescuezilla, memtest86+ boot entry.
+- **Containers/virt/cloud**: podman, dive/ctop/lazydocker, k9s/kubectl/helm, terraform/opentofu, qemu/libvirt/virt-manager (sandbox VMs), gcloud/az CLIs.
+- **Security/RE/forensics**: trivy/grype/syft (vuln+SBOM), gitleaks/trufflehog, openscap, radare2/rizin/cutter, gdb+pwndbg, dex2jar/jd-gui, cyberchef (local), plaso/log2timeline, autopsy, searchsploit/exploitdb, metasploit (authorized, heavy), hashcat/john (authorized).
+- **Data**: duckdb (lab uses it), visidata, miller/csvkit, gron, datasette, pandoc, tesseract (OCR).
+- **AI/voice** (big UX win for zero-knowledge): whisper.cpp (speech→text) + piper (text→speech) ⇒ **talk to the Rescue Assistant**; llama.cpp (lab runs it) as an alt local engine.
+- **Remote access to the rescue box itself**: ttyd (web terminal — drive the stick from a phone browser), novnc/rustdesk (remote desktop), asciinema (record sessions).
+
+### Two "wow" ideas worth prioritizing
+1. **Voice I/O** (whisper.cpp + piper): a non-technical user literally *talks* to the stick — the ultimate zero-knowledge front door.
+2. **ttyd web terminal + QR**: the rescue box shows a QR → phone opens a web terminal/assistant to it, so you drive a headless/far box from your pocket.
