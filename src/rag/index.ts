@@ -137,7 +137,7 @@ export async function loadIndexSnapshot(path: string, options?: RagEngineOptions
 
 /**
  * Best-effort: prefers a sqlite-vec-backed store when both `node:sqlite` and
- * the `sqlite-vec` loadable extension are available (the fiehnlab-live
+ * the `sqlite-vec` loadable extension are available (the rescue-os
  * image); otherwise returns the pure-JS in-memory cosine store, which is
  * what runs in this repo's tests and on any box without sqlite-vec baked in.
  */

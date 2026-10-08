@@ -1,4 +1,4 @@
-// Unit tests for the OpenAI-compatible embedder (the fiehnlab-live default,
+// Unit tests for the OpenAI-compatible embedder (the rescue-os default,
 // served by `llama-server --embeddings`) and the Failover wrapper. No network:
 // fetch is mocked. The RAG end-to-end path is covered separately in rag.test.ts
 // with the pure-JS HashEmbedder.

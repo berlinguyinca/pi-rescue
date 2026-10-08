@@ -26,7 +26,7 @@ let cached: Promise<RescueRuntime> | undefined;
 /**
  * Loads (once per process) the real rescue.yaml config, model router, and
  * RAG engine. Prefers a pre-built KB index (`build-index`, baked into the
- * fiehnlab-live image) over re-chunking + re-embedding the KB on every
+ * rescue-os image) over re-chunking + re-embedding the KB on every
  * command; falls back to building it on the fly when no snapshot exists.
  */
 export async function loadRescueRuntime(): Promise<RescueRuntime> {
@@ -48,7 +48,7 @@ async function buildRuntime(): Promise<RescueRuntime> {
 
 /**
  * `createVectorStore()` tries sqlite-vec first (only actually available on
- * the baked fiehnlab-live image today — see src/rag/vectorStore.ts) and
+ * the baked rescue-os image today — see src/rag/vectorStore.ts) and
  * always falls back to the pure-JS in-memory cosine store on any failure,
  * so this is the one place that decides which store real command runs get;
  * every unit test constructs its own `RagEngine` directly and never reaches

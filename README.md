@@ -19,7 +19,7 @@ checks, explains what it found in plain language, and offers to fix it (confirmi
 On the rescue USB it **boots straight into that greeting** (terminal + a desktop "Rescue Assistant"
 launcher). The slash-commands below are just the expert shortcuts under the hood.
 
-Built to ride on the **`fiehnlab-live`** rescue USB (Ubuntu live + full toolset),
+Built to ride on the **`rescue-os`** rescue USB (Ubuntu live + full toolset),
 where the local model is small, so every skill is **RAG-augmented**: it retrieves
 from a curated diagnostic knowledge base before answering, and works against either
 the local Ollama model (offline) or the `llm.metabolomics.us` gateway (online).
@@ -96,7 +96,7 @@ for freeform auto-dispatch — but the input-event path only activates when **re
 mode** is on (`--rescue-assist` or `PI_RESCUE_ASSIST=1`), and even then only intercepts text
 the routing table actually recognizes as rescue-shaped; anything else continues to pi's normal
 chat. This is a deliberate narrowing of the spec's "always-on" design: loading pi-rescue as a
-sibling extension should never hijack an unrelated pi coding session. The fiehnlab-live rescue
+sibling extension should never hijack an unrelated pi coding session. The rescue-os rescue
 image's launcher is expected to set `PI_RESCUE_ASSIST=1` before starting pi.
 
 ### pi SDK surprises (vs. the original stubs)
@@ -139,7 +139,7 @@ what's installed. `createVectorStore()` (`src/rag/vectorStore.ts`, wired into `s
 runtime.ts`) tries `node:sqlite` + the `sqlite-vec` loadable extension first and falls back to
 the pure-JS in-memory cosine store on any failure. `node:sqlite` is available here (Node 22.5+,
 experimental); `sqlite-vec` is **not** a project dependency, by design — it's expected to be
-provisioned separately on the fiehnlab-live image. Until it is, the sqlite-vec path is wired but
+provisioned separately on the rescue-os image. Until it is, the sqlite-vec path is wired but
 inert everywhere, including the image: the pure-JS store is what actually runs. This code path
 is explicitly not exercised by the test suite (unit tests build a `RagEngine` directly and never
 call `createVectorStore()`), so it is unverified beyond "fails closed to the working fallback."

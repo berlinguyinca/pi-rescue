@@ -4,7 +4,7 @@
 //   node scripts/pi-rescue.ts build-index [--kb <dir>] [--out <file>]
 //
 // Chunks + embeds kb/*.md and writes the index snapshot consumed by
-// src/skills/runtime.ts, so the fiehnlab-live image build can bake a
+// src/skills/runtime.ts, so the rescue-os image build can bake a
 // pre-built KB index instead of every command re-embedding it on first use.
 // Embeds via Ollama's nomic-embed-text when reachable, falling back to the
 // pure-JS hash embedder otherwise (see src/rag/embed.ts) — either way the

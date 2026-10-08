@@ -1,5 +1,5 @@
 # pi-rescue routing: prefer the metabolomics gateway when reachable; fall back to
-# the local model baked on the fiehnlab-live image when offline. The local model
+# the local model baked on the rescue-os image when offline. The local model
 # is served by llama.cpp's `llama-server` (OpenAI-compatible /v1) — chat on :8080
 # under the stable alias `qwen3-local`, embeddings on :8081 as `nomic-embed-text`.
 # Routing is `auto` — these are preferences; core degrades to the best available.

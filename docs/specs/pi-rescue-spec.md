@@ -3,7 +3,7 @@
 ## Goal
 A pi skill-pack that turns a limited local model (or the metabolomics gateway) into an
 effective **diagnose / harden / recover / operate** assistant for any box, riding on the
-`fiehnlab-live` rescue USB.
+`rescue-os` rescue USB.
 
 ## Principles
 1. **Workflows as skills.** Encode the expert procedure (what to collect, order, interpretation),
@@ -122,7 +122,7 @@ time. Always say what it's about to do and why, in a sentence a non-expert under
 **Safety for non-experts:** read-only first; every change is confirmed in plain language with the
 risk stated; nothing destructive on a guessed intent; "what did you change?" is always answerable.
 
-**Autostart on fiehnlab-live (image side):** boot drops into a friendly greeting — a terminal TUI
+**Autostart on rescue-os (image side):** boot drops into a friendly greeting — a terminal TUI
 *and* a desktop launcher ("Rescue Assistant") that start pi with the rescue extension in assist mode:
 > "Hi — tell me what's wrong, or ask a question. e.g. 'the wifi is slow', 'this PC won't start',
 >  'is my network safe?', 'show me what this app is sending'."

@@ -1,7 +1,7 @@
 // Vector storage for the RAG engine: an in-memory pure-JS cosine store (the
 // one that is unit-tested and the one that runs whenever sqlite-vec isn't
 // available — which is every CI box and probably your laptop), plus a
-// best-effort sqlite-vec-backed store for the fiehnlab-live image build where
+// best-effort sqlite-vec-backed store for the rescue-os image build where
 // it is baked in. See docs/specs/pi-rescue-spec.md "RAG over recall".
 import type { KbChunk } from "./chunk.ts";
 
@@ -69,7 +69,7 @@ export class InMemoryCosineStore implements VectorStore {
 /**
  * Best-effort sqlite-vec-backed store for the image build, where both
  * Node's `node:sqlite` and the optional `sqlite-vec` loadable extension are
- * baked into the fiehnlab-live runtime. Uses variable-specifier dynamic
+ * baked into the rescue-os runtime. Uses variable-specifier dynamic
  * imports so `tsc`/bundlers never need either package to resolve; any
  * failure (module missing, extension loading unsupported, etc.) resolves to
  * `undefined` so the caller falls back to {@link InMemoryCosineStore}.

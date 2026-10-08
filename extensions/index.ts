@@ -52,7 +52,7 @@ const SKILLS: Record<string, { summary: string; run: SkillHandler }> = {
   },
 };
 
-/** Env var the fiehnlab-live rescue-assist launcher sets to turn on freeform auto-dispatch. */
+/** Env var the rescue-os rescue-assist launcher sets to turn on freeform auto-dispatch. */
 const ASSIST_ENV_VAR = "PI_RESCUE_ASSIST";
 const ASSIST_FLAG = "rescue-assist";
 
@@ -66,7 +66,7 @@ function assistModeEnabled(pi: ExtensionAPI): boolean {
  * `pi.on("input")` handler: auto-dispatches plain freeform text to `assist`
  * when rescue-assist mode is on. This is opt-in (flag or env var), not
  * always-on, so loading pi-rescue never hijacks a normal pi coding session —
- * only the fiehnlab-live rescue launcher (or an explicit `--rescue-assist`)
+ * only the rescue-os rescue launcher (or an explicit `--rescue-assist`)
  * turns it on. Use `/assist` directly otherwise.
  */
 export function makeInputHandler(pi: ExtensionAPI) {

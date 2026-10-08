@@ -2,7 +2,7 @@
 //
 // `OpenAIEmbedder` is the default: it calls an OpenAI-compatible
 // `/v1/embeddings` endpoint, which is what `llama-server --embeddings` serves
-// (the fiehnlab-live image runs nomic-embed-text under a local llama-server)
+// (the rescue-os image runs nomic-embed-text under a local llama-server)
 // and what the metabolomics gateway serves. `OllamaEmbedder` (kept for
 // back-compat) calls Ollama's native `/api/embeddings` instead. `HashEmbedder`
 // is a deterministic, pure-JS, offline fallback (feature hashing / "hashing
@@ -82,7 +82,7 @@ export interface OpenAIEmbedderOptions {
 
 /**
  * Embeds against an OpenAI-compatible `/v1/embeddings` endpoint. This is what
- * `llama-server --embeddings` serves — the fiehnlab-live image runs
+ * `llama-server --embeddings` serves — the rescue-os image runs
  * nomic-embed-text under a local llama-server on :8081 — and also the shape the
  * metabolomics gateway serves. Override the endpoint/model without touching
  * code via RESCUE_EMBED_BASE_URL / RESCUE_EMBED_MODEL (the build-index step and
