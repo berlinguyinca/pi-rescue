@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+# never commit secrets or the local KB vector store build output
+secrets.env
+*.luks
+kb/.vectors/

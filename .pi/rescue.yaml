@@ -1,0 +1,46 @@
+# pi-rescue routing: prefer the metabolomics gateway when reachable; fall back to
+# the local Ollama model baked on the fiehnlab-live image when offline. Routing is
+# `auto` — these are preferences; core degrades to the best available candidate.
+routing:
+  mode: auto
+  roles:
+    # The rescue skills mostly need one capable text model + a fast one for triage.
+    diagnostician:
+      model: "metabolomics/qwen3.8-27b-modality-text-ctx-c262k-quant-q8_k_xl"
+      fallback: "local/qwen2.5-coder:7b"      # Ollama on the live image (offline)
+      max_context_tokens: 128000
+    triage:
+      model: "metabolomics/qwen3.8-flash_next-modality-text-quant-q4_k_xl"
+      fallback: "local/qwen2.5-coder:7b"
+  providers:
+    metabolomics:
+      base_url: "https://llm.metabolomics.us/v1"   # apiKey injected at runtime from the LUKS container
+    local:
+      base_url: "http://127.0.0.1:11434"           # Ollama
+
+# RAG knowledge base (pre-embedded at image build time)
+rag:
+  kb_dir: "kb"
+  vector_store: "kb/.vectors/rescue.sqlite"        # sqlite-vec
+  embed_model: "nomic-embed-text"                  # via Ollama
+  top_k: 6
+
+# Skills exposed as /commands by extensions/index.ts
+skills:
+  - diagnose
+  - network-triage
+  - harden
+  - disk-rescue
+  - boot-repair
+  - ssh-tunnel
+  - remote
+  - keys
+  - mikrotik
+  - incident-triage
+  - intercept        # authorized MITM traffic inspection
+  - reverse          # authorized app reverse-engineering
+
+# Safety: destructive / outbound actions require confirmation; targets mount read-only.
+safety:
+  confirm_destructive: true
+  mount_targets_readonly: true
