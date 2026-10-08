@@ -37,7 +37,7 @@ relevant KB, proposes a plan, and only acts with confirmation (destructive steps
 | **`/keys`** | Key management: generate/rotate/distribute SSH keys, manage `known_hosts`/`authorized_keys`, unlock & rotate the LUKS secrets container, `age`/`sops` encrypt/decrypt, gh/AWS/gateway key hygiene. |
 | **`/mikrotik`** | RouterOS (API/SSH): pull config/leases/ARP/neighbors/logs, diagnose L2/L3. |
 | **`/incident-triage`** | IR: collect volatile data, rootkit scan, timeline, preserve evidence read-only. |
-| **`/intercept`** | Authorized MITM inspection (mitmproxy): serve a CA, transparent/Wi-Fi-AP routing, decrypt HTTPS/HTTP2/WS, capture+replay flows; SSH capture via `ssh-mitm`. For traffic of apps/devices you control. |
+| **`/intercept`** | Authorized MITM + **capture/analyze** (Proxyman-style): mitmweb flow explorer (filter/search/inspect/replay/breakpoints) or agent-driven `mitmdump` analysis; serve a CA, transparent/Wi-Fi-AP routing, decrypt HTTPS/HTTP2/WS; SSH capture via `ssh-mitm`. For traffic of apps/devices you control. |
 | **`/reverse`** | Authorized app reverse-engineering: apktool/jadx/Ghidra decompile + Frida/objection live instrumentation (cert-pinning bypass on a controlled device), correlated with intercepted traffic. |
 
 > **Scope & authorization:** all remote-access / fleet / key-management and the

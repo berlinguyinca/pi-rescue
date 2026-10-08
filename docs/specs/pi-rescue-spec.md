@@ -82,3 +82,14 @@ SSH: `ssh-mitm` only where the client doesn't verify the host key (TOFU) or you 
 authorized SSH-session capture on clients whose host-key trust you manage. Narrower than HTTPS by design.
 
 All of the above is authorized-use (own/authorized targets), target-scoped, confirmation-gated.
+
+### Capture & analysis (Proxyman-style flow explorer)
+`/intercept` captures and inspects flows two ways:
+- **Human GUI:** `mitmweb` (mitmproxy's browser UI — live flow list, filter/search, pretty-printed
+  request/response bodies, replay + edit-and-resend, breakpoints, HAR export) is the primary Proxyman
+  equivalent on Linux. Optional GUIs: HTTP Toolkit (most Proxyman-like feel, one-click app intercept),
+  Burp Suite Community (Proxy+Repeater), Wireshark (packet-level, SSLKEYLOGFILE-decrypted).
+- **Agent-driven:** capture with `mitmdump` to a flow file, then the skill analyzes programmatically via
+  mitmproxy addons — search across flows, extract endpoints/tokens/secrets, diff, auto-replay, and
+  RAG-flag security issues. This is the value-add over a manual GUI for a small-model-plus-RAG setup.
+Image tools (v2 pass): mitmproxy (mitmweb/mitmdump), wireshark/tshark, + optional HTTP Toolkit & Burp Community.
