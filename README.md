@@ -135,8 +135,27 @@ the real thing for real needs: pi itself (for `ctx.ui`), a reachable Ollama for
 gateway. Collectors (`inxi`, `smartctl`, `dmesg`, `ip`, `dig`, `ufw`/`nft`, ...) need to exist
 on the box they're diagnosing — every one of them degrades to a plain-language "not installed"
 or "needs admin rights" note rather than failing, but the actual diagnosis is only as good as
-what's installed. `sqlite-vec` has a best-effort code path (`src/rag/vectorStore.ts`) that is
-not exercised by this test suite — it is expected to be present only on the baked
-fiehnlab-live image; everywhere else (including here) the pure-JS cosine store is what runs.
+what's installed. `createVectorStore()` (`src/rag/vectorStore.ts`, wired into `src/skills/
+runtime.ts`) tries `node:sqlite` + the `sqlite-vec` loadable extension first and falls back to
+the pure-JS in-memory cosine store on any failure. `node:sqlite` is available here (Node 22.5+,
+experimental); `sqlite-vec` is **not** a project dependency, by design — it's expected to be
+provisioned separately on the fiehnlab-live image. Until it is, the sqlite-vec path is wired but
+inert everywhere, including the image: the pure-JS store is what actually runs. This code path
+is explicitly not exercised by the test suite (unit tests build a `RagEngine` directly and never
+call `createVectorStore()`), so it is unverified beyond "fails closed to the working fallback."
+
+### Known gaps
+
+- `.pi/rescue.yaml`'s `rag.top_k` and `rag.embed_model` aren't threaded through to `src/rag/`
+  or `src/skills/*` yet — the code's own hardcoded defaults happen to match the yaml's, but
+  changing the yaml alone won't currently change behavior. `rag.vector_store` *is* read (see
+  above).
+- A chat completion's `max_tokens` and per-provider timeout are router-wide
+  (`src/model/router.ts`'s `ModelRouterOptions`), not per-role from `.pi/rescue.yaml`'s
+  `max_context_tokens`.
+- The metabolomics gateway's actual auth scheme (static bearer token vs. something in front of
+  it) hasn't been exercised against a live endpoint; if `METABOLOMICS_API_KEY` doesn't work as a
+  plain `Authorization: Bearer` header, every gateway call fails over to local silently (by
+  design) rather than surfacing the auth problem loudly.
 
 Load into pi by cloning next to your pi config and adding it as an extension (see the spec).

@@ -10,7 +10,9 @@ import {
   evaluateMtu,
   evaluateRoute,
   parseDefaultGateway,
+  runNetworkTriage,
 } from "../../src/skills/networkTriage.ts";
+import { collectingIO } from "../../src/skills/types.ts";
 
 test("evaluateLinkCarrier: passes when a real interface is UP", () => {
   const output = [
@@ -97,18 +99,22 @@ test("parseDefaultGateway: extracts the gateway IP from a default route line", (
   assert.equal(parseDefaultGateway("192.168.1.0/24 dev eth0 proto kernel"), undefined);
 });
 
+const PING_OK = "1 packets transmitted, 1 received, 0% packet loss, time 0ms";
+const PING_LOST = "1 packets transmitted, 0 received, 100% packet loss, time 0ms";
+
 test("evaluateGatewayPing: passes on a normal reply", () => {
-  const output = "1 packets transmitted, 1 received, 0% packet loss, time 0ms";
-  assert.equal(evaluateGatewayPing(output).status, "pass");
+  assert.equal(evaluateGatewayPing(PING_OK, PING_OK).status, "pass");
 });
 
-test("evaluateGatewayPing: fails on 100% packet loss (gateway down, or blocking ICMP)", () => {
-  const output = "1 packets transmitted, 0 received, 100% packet loss, time 0ms";
-  assert.equal(evaluateGatewayPing(output).status, "fail");
+test("evaluateGatewayPing: skips (not fails) when the gateway ignores ICMP but the internet is reachable", () => {
+  const result = evaluateGatewayPing(PING_LOST, PING_OK);
+  assert.equal(result.status, "skip");
+  assert.match(result.detail, /ignore/i);
 });
 
-test("evaluateGatewayPing: fails on no output at all", () => {
-  assert.equal(evaluateGatewayPing("").status, "fail");
+test("evaluateGatewayPing: fails when nothing answers a ping at all — gateway and internet both lost", () => {
+  assert.equal(evaluateGatewayPing(PING_LOST, PING_LOST).status, "fail");
+  assert.equal(evaluateGatewayPing("", "").status, "fail");
 });
 
 test("evaluateMtu: skips when even a baseline ping can't get through", () => {
@@ -117,16 +123,25 @@ test("evaluateMtu: skips when even a baseline ping can't get through", () => {
 });
 
 test("evaluateMtu: passes when both a plain and a full-size don't-fragment ping succeed", () => {
-  const ok = "1 packets transmitted, 1 received, 0% packet loss, time 0ms";
-  assert.equal(evaluateMtu(ok, ok).status, "pass");
+  assert.equal(evaluateMtu(PING_OK, PING_OK).status, "pass");
 });
 
-test("evaluateMtu: fails — a path-MTU black hole — when the baseline works but the DF ping doesn't", () => {
-  const ok = "1 packets transmitted, 1 received, 0% packet loss, time 0ms";
-  const blackhole = "1 packets transmitted, 0 received, 100% packet loss, time 0ms";
-  const result = evaluateMtu(ok, blackhole);
+test("evaluateMtu: fails — a path-MTU black hole — when the baseline works but the DF ping silently vanishes", () => {
+  const result = evaluateMtu(PING_OK, PING_LOST);
   assert.equal(result.status, "fail");
   assert.match(result.detail, /mtu|fragment/i);
+});
+
+test("evaluateMtu: passes — PMTU discovery working, not a black hole — on an explicit 'frag needed' reply", () => {
+  const fragNeeded = "ping: local error: Message too long, mtu=1492";
+  const result = evaluateMtu(PING_OK, fragNeeded);
+  assert.equal(result.status, "pass");
+  assert.match(result.detail, /1492/);
+});
+
+test("evaluateMtu: skips (not fails) when the DF ping itself couldn't run (e.g. no raw-socket permission)", () => {
+  const result = evaluateMtu(PING_OK, "");
+  assert.equal(result.status, "skip");
 });
 
 function collected(ok: boolean, output: string): CollectedOutput {
@@ -147,4 +162,52 @@ test("evaluateFirewall: falls back to nft when ufw doesn't answer", () => {
 test("evaluateFirewall: skips (not fails) when neither tool could be checked", () => {
   const result = evaluateFirewall(collected(false, ""), collected(false, ""));
   assert.equal(result.status, "skip");
+});
+
+test("runNetworkTriage: the report goes through io.report(), not io.print()", async () => {
+  const io = collectingIO();
+  const downLink = async (command: string, args: string[]) =>
+    command === "ip" && args[0] === "-br" && args[1] === "link"
+      ? { stdout: "eth0 DOWN aa:bb:cc:dd:ee:ff", stderr: "", code: 0 }
+      : { stdout: "", stderr: "", code: 0 };
+  await runNetworkTriage({ io, exec: downLink });
+  assert.equal(io.reportLog.length, 1);
+  assert.match(io.reportLog[0] ?? "", /cable/i);
+  assert.ok(
+    !io.log.some((line) => /cable/i.test(line)),
+    "the report text must not also appear as a print() narration line",
+  );
+});
+
+test("runNetworkTriage: a gateway that ignores ICMP doesn't stop the ladder short of DNS", async () => {
+  const io = collectingIO();
+  const exec: Parameters<typeof runNetworkTriage>[0]["exec"] = async (command, args) => {
+    if (command === "ip" && args[0] === "-br" && args[1] === "link") {
+      return { stdout: "eth0 UP aa:bb:cc:dd:ee:ff", stderr: "", code: 0 };
+    }
+    if (command === "ip" && args[0] === "-br" && args[1] === "addr") {
+      return { stdout: "eth0 UP 192.168.1.42/24", stderr: "", code: 0 };
+    }
+    if (command === "ip" && args[0] === "route") {
+      return { stdout: "default via 192.168.1.1 dev eth0", stderr: "", code: 0 };
+    }
+    if (command === "ping" && args.includes("192.168.1.1")) {
+      return { stdout: PING_LOST, stderr: "", code: 0 }; // gateway ignores ICMP
+    }
+    if (command === "ping") {
+      return { stdout: PING_OK, stderr: "", code: 0 }; // but the internet is reachable
+    }
+    if (command === "dig") {
+      return { stdout: "93.184.216.34", stderr: "", code: 0 };
+    }
+    return { stdout: "", stderr: "", code: null, failure: "ENOENT" };
+  };
+  const result = await runNetworkTriage({ io, exec });
+  const gateway = result.rungs.find((r) => r.rung === "gateway");
+  assert.equal(gateway?.status, "skip");
+  assert.ok(
+    result.rungs.some((r) => r.rung === "dns"),
+    "DNS must still run after a skipped gateway rung",
+  );
+  assert.equal(result.firstFailure, undefined);
 });

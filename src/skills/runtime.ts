@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type RescueConfig, loadRescueConfig } from "../model/config.ts";
 import { ModelRouter } from "../model/router.ts";
-import { type RagEngine, buildRagEngineFromKb, loadIndexSnapshot } from "../rag/index.ts";
+import { type RagEngine, buildRagEngineFromKb, createVectorStore, loadIndexSnapshot } from "../rag/index.ts";
 
 /** Resolved from this module's own location, not `process.cwd()` — pi loads extensions from a project it isn't. */
 export const PACKAGE_ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -42,15 +42,24 @@ export function resetRescueRuntimeCache(): void {
 async function buildRuntime(): Promise<RescueRuntime> {
   const config = await loadRescueConfig(RESCUE_CONFIG_PATH);
   const model = new ModelRouter({ config: config.routing });
-  const rag = await loadOrBuildRag();
+  const rag = await loadOrBuildRag(config);
   return { config, model, rag };
 }
 
-async function loadOrBuildRag(): Promise<RagEngine> {
+/**
+ * `createVectorStore()` tries sqlite-vec first (only actually available on
+ * the baked fiehnlab-live image today — see src/rag/vectorStore.ts) and
+ * always falls back to the pure-JS in-memory cosine store on any failure,
+ * so this is the one place that decides which store real command runs get;
+ * every unit test constructs its own `RagEngine` directly and never reaches
+ * this function, which is exactly why it's safe to attempt sqlite-vec here.
+ */
+async function loadOrBuildRag(config: RescueConfig): Promise<RagEngine> {
+  const store = await createVectorStore(join(PACKAGE_ROOT, config.rag.vector_store));
   try {
     await stat(KB_INDEX_PATH);
-    return await loadIndexSnapshot(KB_INDEX_PATH);
+    return await loadIndexSnapshot(KB_INDEX_PATH, { store });
   } catch {
-    return buildRagEngineFromKb(KB_DIR);
+    return buildRagEngineFromKb(KB_DIR, { store });
   }
 }

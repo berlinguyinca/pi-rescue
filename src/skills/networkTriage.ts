@@ -110,16 +110,31 @@ function pingSucceeded(output: string): boolean {
   return Number(lossMatch[1]) < 100;
 }
 
-/** Rung 3b: the gateway found above actually answers a ping (route existing isn't the same as the router being up). */
-export function evaluateGatewayPing(pingOutput: string): RungResult {
-  if (pingSucceeded(pingOutput)) {
+/**
+ * Rung 3b: the gateway found above actually answers a ping (route existing
+ * isn't the same as the router being up). Many routers/firewalls are
+ * configured to ignore ICMP as a matter of policy, so a non-answering
+ * gateway is only a real finding if nothing else gets through either — if a
+ * plain ping to the public internet succeeds, this is "skip", not "fail",
+ * and the ladder keeps going instead of stopping on a false alarm.
+ */
+export function evaluateGatewayPing(gatewayPingOutput: string, baselinePingOutput: string): RungResult {
+  if (pingSucceeded(gatewayPingOutput)) {
     return { rung: "gateway", status: "pass", detail: "The router/gateway answers a ping." };
+  }
+  if (pingSucceeded(baselinePingOutput)) {
+    return {
+      rung: "gateway",
+      status: "skip",
+      detail:
+        "The router/gateway doesn't answer pings, but traffic still gets through to the internet — some routers are configured to ignore ICMP, which is normal and not a problem on its own.",
+    };
   }
   return {
     rung: "gateway",
     status: "fail",
     detail:
-      "There's a default route, but the router/gateway doesn't answer a ping. It may be down, or (less likely) just configured to ignore pings.",
+      "There's a default route, but nothing answers a ping — not the gateway, not the internet. The router/gateway is likely down.",
   };
 }
 
@@ -150,7 +165,21 @@ export function evaluateDns(configuredResult: string, publicResult: string): Run
   };
 }
 
-/** Rung 5: path-MTU black hole. A full-size, don't-fragment ping failing while a plain ping succeeds is the signature. */
+/** A "frag needed"/"message too long" reply means path-MTU discovery IS working — the path is
+ *  correctly telling us to use a smaller MTU, not silently swallowing the packet. */
+const MTU_DISCOVERY_WORKING = /frag(?:mentation)? needed|message too long|mtu\s*[=:]\s*\d+/i;
+/** Pulled separately from whichever phrase above matched, so the reported MTU number doesn't
+ *  depend on which alternative in `MTU_DISCOVERY_WORKING` happened to match first. */
+const MTU_VALUE = /mtu\s*[=:]\s*(\d+)/i;
+
+/**
+ * Rung 5: path-MTU black hole. The signature is a full-size, don't-fragment
+ * ping that silently disappears (no reply, no error) while a plain ping to
+ * the same host succeeds. An explicit "fragmentation needed"/"message too
+ * long" reply is the opposite finding — PMTU discovery working correctly —
+ * common on PPPoE (1492) or inside a VPN tunnel (often ~1420), and must not
+ * read as a black hole just because the don't-fragment ping itself failed.
+ */
 export function evaluateMtu(baselinePingOutput: string, mtuPingOutput: string): RungResult {
   if (!pingSucceeded(baselinePingOutput)) {
     return {
@@ -162,11 +191,29 @@ export function evaluateMtu(baselinePingOutput: string, mtuPingOutput: string): 
   if (pingSucceeded(mtuPingOutput)) {
     return { rung: "mtu", status: "pass", detail: "No path-MTU black hole detected." };
   }
+  if (MTU_DISCOVERY_WORKING.test(mtuPingOutput)) {
+    const mtuValue = MTU_VALUE.exec(mtuPingOutput)?.[1];
+    return {
+      rung: "mtu",
+      status: "pass",
+      detail: `Path-MTU discovery is working correctly (the path reported a smaller MTU${
+        mtuValue ? ` of ${mtuValue}` : ""
+      } instead of silently dropping packets).`,
+    };
+  }
+  if (!mtuPingOutput.trim()) {
+    return {
+      rung: "mtu",
+      status: "skip",
+      detail:
+        "Couldn't run the path-MTU check here (ping may need elevated permissions in this environment, or isn't installed).",
+    };
+  }
   return {
     rung: "mtu",
     status: "fail",
     detail:
-      "A normal ping gets through, but a full-size \"don't fragment\" ping doesn't — something in the path is silently dropping oversized packets (a path-MTU black hole). This can break VPNs and some HTTPS sites without a clear error.",
+      'A normal ping gets through, but a full-size "don\'t fragment" ping silently disappears — something in the path is dropping oversized packets without telling anyone (a path-MTU black hole). This can break VPNs and some HTTPS sites without a clear error.',
   };
 }
 
@@ -279,7 +326,22 @@ export async function runNetworkTriage(deps: TriageDeps): Promise<TriageResult> 
 
       if (route.status !== "fail" && gateway) {
         const gatewayPing = await runCollector(gatewayPingSpec(gateway), exec);
-        const gatewayResult = evaluateGatewayPing(gatewayPing.ok ? gatewayPing.output : "");
+        // Computed once, up front: used both to tell a genuinely-down gateway from one that just
+        // ignores ICMP (below), and again by the MTU rung later on.
+        const baseline = await runCollector(RUNG_SPECS.pingBaseline, exec);
+
+        const gatewayResult: RungResult =
+          !gatewayPing.ok && !baseline.ok
+            ? {
+                rung: "gateway",
+                status: "skip",
+                detail:
+                  "Couldn't check connectivity with ping on this box (not installed, or not permitted here) — a tooling gap, not a finding.",
+              }
+            : evaluateGatewayPing(
+                gatewayPing.ok ? gatewayPing.output : "",
+                baseline.ok ? baseline.output : "",
+              );
         rungs.push(gatewayResult);
 
         if (gatewayResult.status !== "fail") {
@@ -287,7 +349,6 @@ export async function runNetworkTriage(deps: TriageDeps): Promise<TriageResult> 
           rungs.push(dnsRung);
 
           if (dnsRung.status !== "fail") {
-            const baseline = await runCollector(RUNG_SPECS.pingBaseline, exec);
             const mtuPing = await runCollector(RUNG_SPECS.pingMtu, exec);
             rungs.push(evaluateMtu(baseline.ok ? baseline.output : "", mtuPing.ok ? mtuPing.output : ""));
           }
@@ -341,7 +402,7 @@ export async function runNetworkTriage(deps: TriageDeps): Promise<TriageResult> 
     report = firstFailure.detail;
   }
 
-  deps.io.print(report);
+  deps.io.report(report);
   return { rungs, firstFailure, report };
 }
 
