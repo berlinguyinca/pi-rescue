@@ -1,0 +1,15 @@
+System:
+  Kernel: 6.8.0-38-generic x86_64 bits: 64
+  Desktop: GNOME v: 42.9
+  Distro: Ubuntu 22.04.3 LTS
+CPU:
+  Info: 8-core model: Intel Core i7-9700K bits: 64 type: MCP
+  Speed (MHz): avg: 1800 min/max: 800/4900
+Memory:
+  System RAM: total: 32 GiB available: 31.28 GiB used: 22.65 GiB (72.4%)
+Drives:
+  Local Storage: total: 1.82 TiB used: 512.44 GiB (27.5%)
+  ID-1: /dev/sda vendor: Samsung model: SSD 860 size: 931.51 GiB
+Sensors:
+  System Temperatures: cpu: 52.0 C
+  Fan Speeds (RPM): cpu: 1800
