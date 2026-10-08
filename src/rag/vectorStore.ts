@@ -81,11 +81,19 @@ export class InMemoryCosineStore implements VectorStore {
  */
 export async function tryCreateSqliteVecStore(dbPath: string): Promise<VectorStore | undefined> {
   try {
-    const sqliteSpecifier = "node:sqlite";
+    // Check for `sqlite-vec` FIRST: it is not a project dependency (by design, see README), so
+    // on every box without it this import is the one that fails, and failing here means never
+    // importing `node:sqlite` at all. `node:sqlite` is experimental and logs an
+    // "ExperimentalWarning" to stderr on first import — fine on the box that actually has
+    // sqlite-vec baked in, but not something every other box's pi session should print once.
     const vecSpecifier = "sqlite-vec";
+    const sqliteVec = (await import(vecSpecifier)) as { getLoadablePath(): string };
+
+    const sqliteSpecifier = "node:sqlite";
     const nodeSqlite = (await import(sqliteSpecifier)) as {
       DatabaseSync: new (
         path: string,
+        options?: { allowExtension?: boolean },
       ) => {
         exec(sql: string): void;
         prepare(sql: string): {
@@ -96,9 +104,9 @@ export async function tryCreateSqliteVecStore(dbPath: string): Promise<VectorSto
         close(): void;
       };
     };
-    const sqliteVec = (await import(vecSpecifier)) as { getLoadablePath(): string };
 
-    const db = new nodeSqlite.DatabaseSync(dbPath);
+    // `loadExtension()` throws unless the database was explicitly opened with this.
+    const db = new nodeSqlite.DatabaseSync(dbPath, { allowExtension: true });
     if (typeof db.loadExtension !== "function") return undefined;
     db.loadExtension(sqliteVec.getLoadablePath());
     db.exec(
