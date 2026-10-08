@@ -1,4 +1,5 @@
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { ioFromContext } from "./types.ts";
 
 /**
  * Run lynis + the fiehnlab hardening playbook; interpret; apply; re-scan.
@@ -9,7 +10,7 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
  *   3. plan()      — ask the model (gateway or local Ollama)
  *   4. act()       — gated on confirmation for destructive/outbound steps
  */
-export async function harden(ctx: ExtensionCommandContext, _args: string[]): Promise<void> {
+export async function harden(_args: string, ctx: ExtensionCommandContext): Promise<void> {
   // TODO(v2): implement. Scaffold only.
-  ctx.print?.("[pi-rescue:harden] not yet implemented — see docs/specs/pi-rescue-spec.md");
+  ioFromContext(ctx).print("[pi-rescue:harden] not yet implemented — see docs/specs/pi-rescue-spec.md");
 }

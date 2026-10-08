@@ -1,4 +1,5 @@
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { ioFromContext } from "./types.ts";
 
 /**
  * Remote sessions (ssh/mosh/tmux) + parallel fleet command across authorized hosts.
@@ -9,7 +10,9 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
  *   3. plan()      — ask the model (gateway or local Ollama)
  *   4. act()       — gated on confirmation for destructive/outbound steps
  */
-export async function remoteSession(ctx: ExtensionCommandContext, _args: string[]): Promise<void> {
+export async function remoteSession(_args: string, ctx: ExtensionCommandContext): Promise<void> {
   // TODO(v2): implement. Scaffold only.
-  ctx.print?.("[pi-rescue:remoteSession] not yet implemented — see docs/specs/pi-rescue-spec.md");
+  ioFromContext(ctx).print(
+    "[pi-rescue:remoteSession] not yet implemented — see docs/specs/pi-rescue-spec.md",
+  );
 }

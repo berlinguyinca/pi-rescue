@@ -1,4 +1,5 @@
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { ioFromContext } from "./types.ts";
 
 /**
  * Whole-network audit (complements single-host /network-triage). Four passes:
@@ -20,7 +21,9 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
  * Scanning/vuln passes are confirmation-gated and scoped to a target range you supply;
  * no auto-wide scanning, no exploitation, no stealth/evasion.
  */
-export async function networkAudit(ctx: ExtensionCommandContext, _args: string[]): Promise<void> {
+export async function networkAudit(_args: string, ctx: ExtensionCommandContext): Promise<void> {
   // TODO(v2): implement MAP → ROUTING → PERFORMANCE → SECURITY → report.
-  ctx.print?.("[pi-rescue:network-audit] not yet implemented — see docs/specs/pi-rescue-spec.md");
+  ioFromContext(ctx).print(
+    "[pi-rescue:network-audit] not yet implemented — see docs/specs/pi-rescue-spec.md",
+  );
 }

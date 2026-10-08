@@ -1,41 +1,105 @@
-// pi-rescue extension entry. Registers the rescue /commands with pi and dispatches
-// each to its skill module in ../src/skills. Mirrors the registration shape of
-// berlinguyinca/pi-engineering/extensions/index.ts — align the exact ExtensionAPI
-// surface with that reference when wiring up for real.
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+// pi-rescue extension entry. Registers the rescue /commands with pi and wires
+// up `assist`'s freeform-input auto-dispatch. See docs/specs/pi-rescue-spec.md
+// and AGENTS.md for the operating policy (read-only first, confirm before
+// anything destructive/outbound).
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+  ExtensionContext,
+  InputEvent,
+  InputEventResult,
+} from "@earendil-works/pi-coding-agent";
 
-import { assist } from "../src/skills/assist.ts";
+import { assist, decideAssistAction, runAssist } from "../src/skills/assist.ts";
 import { diagnose } from "../src/skills/diagnose.ts";
-import { networkTriage } from "../src/skills/networkTriage.ts";
-import { networkAudit } from "../src/skills/networkAudit.ts";
 import { harden } from "../src/skills/harden.ts";
-import { sshTunnel } from "../src/skills/sshTunnel.ts";
-import { remoteSession } from "../src/skills/remoteSession.ts";
-import { keyManagement } from "../src/skills/keyManagement.ts";
 import { intercept } from "../src/skills/intercept.ts";
+import { keyManagement } from "../src/skills/keyManagement.ts";
+import { networkAudit } from "../src/skills/networkAudit.ts";
+import { networkTriage } from "../src/skills/networkTriage.ts";
+import { remoteSession } from "../src/skills/remoteSession.ts";
 import { reverseApp } from "../src/skills/reverseApp.ts";
+import { sshTunnel } from "../src/skills/sshTunnel.ts";
+import { ioFromContext } from "../src/skills/types.ts";
 
-type Skill = (ctx: ExtensionCommandContext, args: string[]) => Promise<void>;
+type SkillHandler = (args: string, ctx: ExtensionCommandContext) => Promise<void>;
 
-const SKILLS: Record<string, { summary: string; run: Skill }> = {
-  assist: { summary: "Zero-knowledge front door: describe the problem in plain words; routes + explains", run: assist },
+const SKILLS: Record<string, { summary: string; run: SkillHandler }> = {
+  assist: {
+    summary: "Zero-knowledge front door: describe the problem in plain words; routes + explains",
+    run: assist,
+  },
   diagnose: { summary: "Collect system context, RAG, and root-cause a box", run: diagnose },
-  "network-triage": { summary: "link→DHCP→DNS→route→firewall network debugging ladder (single host)", run: networkTriage },
-  "network-audit": { summary: "Whole-network audit: topology, routing, performance & security", run: networkAudit },
+  "network-triage": {
+    summary: "link→DHCP→DNS→route→firewall network debugging ladder (single host)",
+    run: networkTriage,
+  },
+  "network-audit": {
+    summary: "Whole-network audit: topology, routing, performance & security",
+    run: networkAudit,
+  },
   harden: { summary: "Audit (lynis) + apply the fiehnlab hardening, then re-scan", run: harden },
   "ssh-tunnel": { summary: "Create/tear down SSH tunnels & port-forwards; inventory", run: sshTunnel },
   remote: { summary: "Remote sessions + fleet command across authorized hosts", run: remoteSession },
   keys: { summary: "SSH/LUKS/age key generation, rotation, distribution & hygiene", run: keyManagement },
-  intercept: { summary: "Authorized MITM: mitmproxy CA + routing, decrypt HTTPS/SSH, capture/replay", run: intercept },
-  reverse: { summary: "Authorized app RE: decompile, Frida instrument, correlate with traffic", run: reverseApp },
+  intercept: {
+    summary: "Authorized MITM: mitmproxy CA + routing, decrypt HTTPS/SSH, capture/replay",
+    run: intercept,
+  },
+  reverse: {
+    summary: "Authorized app RE: decompile, Frida instrument, correlate with traffic",
+    run: reverseApp,
+  },
 };
 
-export default function activate(api: ExtensionAPI): void {
+/** Env var the fiehnlab-live rescue-assist launcher sets to turn on freeform auto-dispatch. */
+const ASSIST_ENV_VAR = "PI_RESCUE_ASSIST";
+const ASSIST_FLAG = "rescue-assist";
+
+function assistModeEnabled(pi: ExtensionAPI): boolean {
+  if (pi.getFlag(ASSIST_FLAG) === true) return true;
+  const env = process.env[ASSIST_ENV_VAR];
+  return env === "1" || env === "true";
+}
+
+/**
+ * `pi.on("input")` handler: auto-dispatches plain freeform text to `assist`
+ * when rescue-assist mode is on. This is opt-in (flag or env var), not
+ * always-on, so loading pi-rescue never hijacks a normal pi coding session —
+ * only the fiehnlab-live rescue launcher (or an explicit `--rescue-assist`)
+ * turns it on. Use `/assist` directly otherwise.
+ */
+export function makeInputHandler(pi: ExtensionAPI) {
+  return async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
+    if (!assistModeEnabled(pi)) return { action: "continue" };
+    if (event.source === "extension") return { action: "continue" };
+    const text = event.text.trim();
+    if (text.length === 0 || text.startsWith("/") || text.startsWith("!")) return { action: "continue" };
+
+    // Only intercept text that the routing table actually recognizes as a
+    // rescue-shaped request; anything else (ordinary coding chat) continues
+    // through to the model as normal, even in rescue-assist mode.
+    const action = decideAssistAction(text);
+    if (action.kind === "clarify") return { action: "continue" };
+
+    await runAssist(text, { io: ioFromContext(ctx) });
+    return { action: "handled" };
+  };
+}
+
+export default function activate(pi: ExtensionAPI): void {
+  pi.registerFlag(ASSIST_FLAG, {
+    description: "Auto-dispatch freeform input to the pi-rescue /assist concierge (also: PI_RESCUE_ASSIST=1)",
+    type: "boolean",
+    default: false,
+  });
+
   for (const [name, skill] of Object.entries(SKILLS)) {
-    api.registerCommand({
-      name,
-      summary: skill.summary,
-      run: (ctx: ExtensionCommandContext, args: string[]) => skill.run(ctx, args),
+    pi.registerCommand(name, {
+      description: skill.summary,
+      handler: (args: string, ctx: ExtensionCommandContext) => skill.run(args, ctx),
     });
   }
+
+  pi.on("input", makeInputHandler(pi));
 }
