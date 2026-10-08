@@ -64,3 +64,21 @@ Then RAG-interpret → prioritized findings + remediation.
 Image tools (add in v2 pass): nmap+NSE, masscan, arp-scan, fping, netdiscover, lldpd, mtr,
 tcptraceroute, iperf3, iftop, nethogs, ntopng (optional), testssl.sh, sslscan, snmp, bettercap, tshark.
 Scope: authorized networks only; scans are target-scoped + confirmation-gated; no exploitation/evasion.
+
+### HTTPS/SSL/SSH decryption — mechanisms & limits
+`/intercept` provides two decryption paths, plus `/reverse` for pinning:
+1. **MITM-with-your-CA** (arbitrary client you control): mitmproxy issues a CA; you install it in the
+   client's trust store; proxy is placed in path (transparent iptables REDIRECT / explicit proxy /
+   Wi-Fi AP via hostapd+dnsmasq); TLS is terminated with an on-the-fly leaf signed by your CA →
+   plaintext. Handles TLS 1.3, HTTP/2, WebSocket. Tools: mitmproxy/mitmweb/mitmdump, bettercap, sslsplit.
+2. **SSLKEYLOGFILE** (apps you launch): run with `SSLKEYLOGFILE=…`; app writes TLS keys; tshark/Wireshark
+   decrypts the capture. No CA, no in-path proxy, immune to pinning. Best for debugging your own apps.
+
+Pinning: apps that pin reject the CA → bypass via `/reverse` (Frida/objection) on a controlled device,
+or APK patch (apktool). Limits: cannot decrypt a client you don't control (no CA / no keylog); mTLS needs
+the client cert; QUIC/HTTP3 → block UDP/443 to force TCP fallback.
+
+SSH: `ssh-mitm` only where the client doesn't verify the host key (TOFU) or you control its known_hosts —
+authorized SSH-session capture on clients whose host-key trust you manage. Narrower than HTTPS by design.
+
+All of the above is authorized-use (own/authorized targets), target-scoped, confirmation-gated.
