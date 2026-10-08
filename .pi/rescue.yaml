@@ -1,28 +1,30 @@
 # pi-rescue routing: prefer the metabolomics gateway when reachable; fall back to
-# the local Ollama model baked on the fiehnlab-live image when offline. Routing is
-# `auto` — these are preferences; core degrades to the best available candidate.
+# the local model baked on the fiehnlab-live image when offline. The local model
+# is served by llama.cpp's `llama-server` (OpenAI-compatible /v1) — chat on :8080
+# under the stable alias `qwen3-local`, embeddings on :8081 as `nomic-embed-text`.
+# Routing is `auto` — these are preferences; core degrades to the best available.
 routing:
   mode: auto
   roles:
     # The rescue skills mostly need one capable text model + a fast one for triage.
     diagnostician:
       model: "metabolomics/qwen3.8-27b-modality-text-ctx-c262k-quant-q8_k_xl"
-      fallback: "local/qwen2.5-coder:7b"      # Ollama on the live image (offline)
+      fallback: "local/qwen3-local"           # llama-server on the live image (offline)
       max_context_tokens: 128000
     triage:
       model: "metabolomics/qwen3.8-flash_next-modality-text-quant-q4_k_xl"
-      fallback: "local/qwen2.5-coder:7b"
+      fallback: "local/qwen3-local"
   providers:
     metabolomics:
       base_url: "https://llm.metabolomics.us/v1"   # apiKey injected at runtime from the LUKS container
     local:
-      base_url: "http://127.0.0.1:11434"           # Ollama
+      base_url: "http://127.0.0.1:8080/v1"         # llama-server (chat), alias qwen3-local
 
 # RAG knowledge base (pre-embedded at image build time)
 rag:
   kb_dir: "kb"
   vector_store: "kb/.vectors/rescue.sqlite"        # sqlite-vec
-  embed_model: "nomic-embed-text"                  # via Ollama
+  embed_model: "nomic-embed-text"                  # via llama-server --embeddings on :8081
   top_k: 6
 
 # Skills exposed as /commands by extensions/index.ts

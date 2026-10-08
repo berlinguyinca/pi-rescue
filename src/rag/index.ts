@@ -149,6 +149,6 @@ export async function createVectorStore(dbPath: string): Promise<VectorStore> {
 export type { KbChunk } from "./chunk.ts";
 export { chunkKb, chunkMarkdown } from "./chunk.ts";
 export type { Embedder } from "./embed.ts";
-export { FailoverEmbedder, HashEmbedder, OllamaEmbedder } from "./embed.ts";
+export { FailoverEmbedder, HashEmbedder, OllamaEmbedder, OpenAIEmbedder } from "./embed.ts";
 export type { VectorStore, VectorMatch } from "./vectorStore.ts";
 export { InMemoryCosineStore, cosineSimilarity } from "./vectorStore.ts";

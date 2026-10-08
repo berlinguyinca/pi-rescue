@@ -1,9 +1,13 @@
 // Embedding backends for the RAG engine.
 //
-// `OllamaEmbedder` calls the local Ollama server's nomic-embed-text model.
-// `HashEmbedder` is a deterministic, pure-JS, offline fallback (feature
-// hashing / "hashing trick") used whenever Ollama is unreachable — including
-// every unit test, which must not touch the network. Vectors from the two
+// `OpenAIEmbedder` is the default: it calls an OpenAI-compatible
+// `/v1/embeddings` endpoint, which is what `llama-server --embeddings` serves
+// (the fiehnlab-live image runs nomic-embed-text under a local llama-server)
+// and what the metabolomics gateway serves. `OllamaEmbedder` (kept for
+// back-compat) calls Ollama's native `/api/embeddings` instead. `HashEmbedder`
+// is a deterministic, pure-JS, offline fallback (feature hashing / "hashing
+// trick") used whenever the embeddings server is unreachable — including every
+// unit test, which must not touch the network. Vectors from different
 // embedders are never comparable (different dimensions, different id), so
 // `embedderId()` lets the RAG engine detect a mismatch and re-embed instead
 // of silently scoring garbage. See docs/specs §Principles (offline-capable).
@@ -69,6 +73,67 @@ export class OllamaEmbedder implements Embedder {
   }
 }
 
+export interface OpenAIEmbedderOptions {
+  baseUrl?: string;
+  model?: string;
+  fetchImpl?: FetchLike;
+  timeoutMs?: number;
+}
+
+/**
+ * Embeds against an OpenAI-compatible `/v1/embeddings` endpoint. This is what
+ * `llama-server --embeddings` serves — the fiehnlab-live image runs
+ * nomic-embed-text under a local llama-server on :8081 — and also the shape the
+ * metabolomics gateway serves. Override the endpoint/model without touching
+ * code via RESCUE_EMBED_BASE_URL / RESCUE_EMBED_MODEL (the build-index step and
+ * the runtime both honor them). nomic-embed-text still needs its
+ * search_document:/search_query: task prefix regardless of transport.
+ */
+export class OpenAIEmbedder implements Embedder {
+  readonly id: string;
+  private readonly baseUrl: string;
+  private readonly model: string;
+  private readonly fetchImpl: FetchLike;
+  private readonly timeoutMs: number;
+
+  constructor(options: OpenAIEmbedderOptions = {}) {
+    const env = typeof process !== "undefined" ? process.env : undefined;
+    this.baseUrl = (options.baseUrl ?? env?.RESCUE_EMBED_BASE_URL ?? "http://127.0.0.1:8081/v1").replace(
+      /\/+$/,
+      "",
+    );
+    this.model = options.model ?? env?.RESCUE_EMBED_MODEL ?? "nomic-embed-text";
+    this.fetchImpl = options.fetchImpl ?? (globalThis.fetch as unknown as FetchLike);
+    this.timeoutMs = options.timeoutMs ?? 10_000;
+    this.id = `openai:${this.model}`;
+  }
+
+  async embed(text: string, kind: EmbedKind): Promise<number[]> {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : undefined;
+    const timer = controller ? setTimeout(() => controller.abort(), this.timeoutMs) : undefined;
+    let response: ResponseLike;
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}/embeddings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: this.model, input: nomicPrefix(kind) + text }),
+        signal: controller?.signal,
+      });
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+    if (!response.ok) {
+      throw new Error(`embeddings HTTP ${response.status}`);
+    }
+    const payload = (await response.json()) as { data?: Array<{ embedding?: number[] }> };
+    const vector = payload.data?.[0]?.embedding;
+    if (!vector || vector.length === 0) {
+      throw new Error("embeddings endpoint returned no vector");
+    }
+    return vector;
+  }
+}
+
 /** Fixed dimension for the offline fallback embedder — small enough to be fast, large enough to separate topics. */
 const HASH_DIMENSIONS = 256;
 
@@ -113,28 +178,33 @@ export class HashEmbedder implements Embedder {
   }
 }
 
-/** Tries Ollama first; falls back to the hash embedder on any failure (network down, model not pulled, etc). */
+/**
+ * Tries the primary embedder first (an OpenAI-compatible `/v1/embeddings`
+ * server by default — llama-server on the image), falling back to the pure-JS
+ * hash embedder on any failure (server down, model not loaded, etc). Pass an
+ * `OllamaEmbedder` as the primary to talk to a native Ollama instead.
+ */
 export class FailoverEmbedder implements Embedder {
-  private readonly ollama: OllamaEmbedder;
+  private readonly primary: Embedder;
   private readonly fallback: Embedder;
-  private ollamaFailed = false;
+  private primaryFailed = false;
 
-  constructor(ollama: OllamaEmbedder = new OllamaEmbedder(), fallback: Embedder = new HashEmbedder()) {
-    this.ollama = ollama;
+  constructor(primary: Embedder = new OpenAIEmbedder(), fallback: Embedder = new HashEmbedder()) {
+    this.primary = primary;
     this.fallback = fallback;
   }
 
   /** Reflects whichever embedder actually answered the most recent call. */
   get id(): string {
-    return this.ollamaFailed ? this.fallback.id : this.ollama.id;
+    return this.primaryFailed ? this.fallback.id : this.primary.id;
   }
 
   async embed(text: string, kind: EmbedKind): Promise<number[]> {
-    if (!this.ollamaFailed) {
+    if (!this.primaryFailed) {
       try {
-        return await this.ollama.embed(text, kind);
+        return await this.primary.embed(text, kind);
       } catch {
-        this.ollamaFailed = true;
+        this.primaryFailed = true;
       }
     }
     return this.fallback.embed(text, kind);
