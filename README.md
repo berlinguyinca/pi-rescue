@@ -79,15 +79,64 @@ pi  ──loads──▶  extensions/index.ts  ──registers──▶  /diagno
 
 ## Status
 
-Scaffold. Skill bodies are stubs (`src/skills/*.ts`) — implementation tracked in
-[`docs/specs/pi-rescue-spec.md`](docs/specs/pi-rescue-spec.md). First wave:
-`/diagnose`, `/network-triage`, `/harden`.
+First wave implemented: **`/diagnose`**, **`/network-triage`**, and **`/assist`** (the
+zero-knowledge front door that routes to them). `src/rag/` (chunk + embed + vector store,
+Ollama with a pure-JS fallback) and `src/model/` (the gateway↔local router) are implemented
+and unit-tested. `/network-audit`, `/harden`, `/ssh-tunnel`, `/remote`, `/keys`, `/intercept`,
+`/reverse` remain stubs — real skill modules that print a "not yet implemented" notice and are
+wired into `extensions/index.ts` with the real `registerCommand` signature, so adding their
+bodies later is a drop-in change. `disk-rescue`, `boot-repair`, `mikrotik`, and
+`incident-triage` have no module yet at all (`assist` knows this and offers `/diagnose` or
+`/network-triage` instead when one of those is requested).
+
+### How `assist` is wired
+
+`assist` is registered both as the explicit `/assist` command and via `pi.on("input", ...)`
+for freeform auto-dispatch — but the input-event path only activates when **rescue-assist
+mode** is on (`--rescue-assist` or `PI_RESCUE_ASSIST=1`), and even then only intercepts text
+the routing table actually recognizes as rescue-shaped; anything else continues to pi's normal
+chat. This is a deliberate narrowing of the spec's "always-on" design: loading pi-rescue as a
+sibling extension should never hijack an unrelated pi coding session. The fiehnlab-live rescue
+image's launcher is expected to set `PI_RESCUE_ASSIST=1` before starting pi.
+
+### pi SDK surprises (vs. the original stubs)
+
+The scaffold's stubs assumed an API shape the real `@earendil-works/pi-coding-agent` doesn't
+have. Adapted during implementation:
+- Command handlers are `(args: string, ctx: ExtensionCommandContext) => Promise<void>`, not
+  `(ctx, args: string[])`, and are registered with `pi.registerCommand(name, { description,
+  handler })`, not `{ name, summary, run }`.
+- There is no `ctx.print()`. Output goes through `ctx.ui.notify(message, "info")`, which (per
+  `interactive-mode.js`'s `showStatus`) is appended to the chat transcript, not a disappearing
+  toast — safe to use for a full multi-paragraph report.
+- `exec()` lives on `pi` (`ExtensionAPI`), not on `ctx`. Skills shell out themselves via
+  `node:child_process.execFile`, wrapped behind the injectable `Exec` type in
+  `src/skills/collectors.ts` for testability.
+- Freeform-input interception is `pi.on("input", handler)`, returning `{ action: "continue" |
+  "transform" | "handled" }` — there's no separate "default handler" concept.
+- Node's `--experimental-strip-types` (which `node --test` uses here) rejects TypeScript
+  parameter properties (`constructor(private readonly x: T)`) — every class in this repo
+  assigns fields in the constructor body instead.
 
 ## Develop
 
 ```bash
 npm install
 npm run typecheck && npm run lint && npm test
+npm run build-index   # optional: pre-embeds kb/*.md to kb/.vectors/index.json (baked into the image)
 ```
+
+### What needs a live box to actually exercise
+
+`node --test` covers all pure logic (chunking/ranking, parsers, the routing table, the
+network-triage ladder, model-router failover) with everything side-effecting mocked. Running
+the real thing for real needs: pi itself (for `ctx.ui`), a reachable Ollama for
+`nomic-embed-text` and/or local chat completions, and/or `METABOLOMICS_API_KEY` for the
+gateway. Collectors (`inxi`, `smartctl`, `dmesg`, `ip`, `dig`, `ufw`/`nft`, ...) need to exist
+on the box they're diagnosing — every one of them degrades to a plain-language "not installed"
+or "needs admin rights" note rather than failing, but the actual diagnosis is only as good as
+what's installed. `sqlite-vec` has a best-effort code path (`src/rag/vectorStore.ts`) that is
+not exercised by this test suite — it is expected to be present only on the baked
+fiehnlab-live image; everywhere else (including here) the pure-JS cosine store is what runs.
 
 Load into pi by cloning next to your pi config and adding it as an extension (see the spec).
